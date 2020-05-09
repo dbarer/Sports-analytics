@@ -1,0 +1,124 @@
+---
+title: "Part 1 analysis"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("readxl")
+library("dplyr")
+```
+
+```{r}
+# read in datasets both for defense and draft year
+f1 = read.csv("defense_summary-2010.csv")
+f2 = read.csv("defense_summary-2011.csv")
+f3 = read.csv("defense_summary-2012.csv")
+f4 = read.csv("defense_summary-2013.csv")
+f5 = read.csv("defense_summary-2014.csv")
+f6 = read.csv("defense_summary-2015.csv")
+f7 = read.csv("defense_summary-2016.csv")
+f8 = read.csv("defense_summary-2017.csv")
+f9 = read.csv("defense_summary-2018.csv")
+f10 = read.csv("defense_summary-2019.csv")
+d1 = read_excel("2006.xlsx")
+d2 = read_excel("2007.xlsx")
+d3 = read_excel("2008.xlsx")
+d4 = read_excel("2009.xlsx")
+d5 = read_excel("2010.xlsx")
+d6 = read_excel("2011.xlsx")
+d7 = read_excel("2012.xlsx")
+d8 = read_excel("2013.xlsx")
+d9 = read_excel("2014.xlsx")
+d10 = read_excel("2015.xlsx")
+d11 = read_excel("2016.xlsx")
+d12 = read_excel("2017.xlsx")
+d13 = read_excel("2018.xlsx")
+d13$Round = d13$ound
+d13 = subset(d13, select = -c(ound) )
+```
+
+```{r}
+#clean dataset of draft years to needed columns
+ds = list(d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13)
+yr = 2007
+for(i in (1:length(ds))){
+  ds[[i]] = data.frame("Round" = ds[[i]]$Round, "player" = ds[[i]]$Name, "pick" = ds[[i]]$Player, "Year" =  yr, "DraftBy" = ds[[i]]$Team)
+  yr = yr + 1
+}
+```
+
+
+```{r}
+#clean dataframes of statistics to needed columns
+fs = list(f1, f2, f3, f4, f5, f6, f7, f8, f9)
+
+fac_to_char <- function(df) {
+  factors <- sapply(df, is.factor)
+  df[, factors] <- sapply(df[, factors], as.character)
+  return(df)
+}
+
+#f1 = fac_to_char(f1)
+for(i in (1:length(fs))){
+  fs[[i]] = fac_to_char(fs[[i]])
+  fs[[i]] = data.frame("id" = fs[[i]]$player_id, "player" = fs[[i]]$player,    "team" = fs[[i]]$team_name , "snaps" = fs[[i]]$snap_counts_total, pff =   fs[[i]]$grades_defense, "pos" = fs[[i]]$position)
+}
+```
+```{r}
+# create list of all valid draft years for a given year
+valid_draft_yrs = vector("list", length(fs))
+for(i in ((1:(length(ds)-3)))){
+  valid_draft_yrs[[i]] = rbind(ds[[i]], ds[[i+1]], ds[[i+2]], ds[[i+3]])
+}
+```
+
+
+```{r}
+# create a dataframe of all players stats on their rookie contracts, final df needed for regression
+m1 = inner_join(valid_draft_yrs[[1]], fs[[1]], by = c("player"))
+ms = vector("list", length(fs))
+for(i in (1 : length(fs))){
+  ms[[i]] = inner_join(valid_draft_yrs[[i]], fs[[i]], by=c("player"))
+}
+final = rbind_list(ms)
+
+final = subset(final, ((final$pos != 'G') & (final$pos != 'T') & (final$pos != 'TE') & (final$pos != 'TE') & (final$pos != 'FB')  & (final$pos != 'HB') & (final$pos != 'WR')))
+tbl <-as.data.frame(table(unlist(final$pos)))
+
+```
+```{r}
+by_pos = split(final, final$pos )
+cb = lm(pff ~ pick, data = by_pos$CB)
+di = lm(pff ~ pick, data = by_pos$DI)
+ed = lm(pff ~ pick, data = by_pos$ED)
+lb = lm(pff ~ pick, data = by_pos$LB)
+s = lm(pff ~ pick, data = by_pos$S)
+summary(cb)
+summary(di)
+summary(ed)
+summary(lb)
+summary(s)
+```
+```{r}
+cb2 = lm(pff ~ Round, data = by_pos$CB)
+di2= lm(pff ~ Round, data = by_pos$DI)
+ed2 = lm(pff ~ Round, data = by_pos$ED)
+lb2 = lm(pff ~ Round, data = by_pos$LB)
+s2 = lm(pff ~ Round, data = by_pos$S)
+summary(cb2)
+summary(di2)
+summary(ed2)
+summary(lb2)
+summary(s2)
+```
+
+```{r} 
+plot(x = by_pos$DI$pick, y = by_pos$DI$pff)
+```
+
+
+
+
+
+
