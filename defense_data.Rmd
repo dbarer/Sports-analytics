@@ -4,9 +4,11 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
+
 knitr::opts_chunk$set(echo = TRUE)
 library("readxl")
 library("dplyr")
+library("xlsx")
 ```
 
 ```{r}
@@ -40,10 +42,10 @@ d13 = subset(d13, select = -c(ound) )
 
 ```{r}
 #clean dataset of draft years to needed columns
-ds = list(d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13)
-yr = 2007
+ds = list(d5, d6, d7, d8, d9, d10, d11, d12, d13)
+yr = 2010
 for(i in (1:length(ds))){
-  ds[[i]] = data.frame("Round" = ds[[i]]$Round, "player" = ds[[i]]$Name, "pick" = ds[[i]]$Player, "Year" =  yr, "DraftBy" = ds[[i]]$Team)
+  ds[[i]] = data.frame("Round" = ds[[i]]$Round, "player" = ds[[i]]$Name, "pick" = ds[[i]]$Player, "Year" =  yr, "DraftBy" = ds[[i]]$Team, "pos_drafted" = ds[[i]]$Position)
   yr = yr + 1
 }
 ```
@@ -51,7 +53,7 @@ for(i in (1:length(ds))){
 
 ```{r}
 #clean dataframes of statistics to needed columns
-fs = list(f1, f2, f3, f4, f5, f6, f7, f8, f9)
+fs = list(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10)
 
 fac_to_char <- function(df) {
   factors <- sapply(df, is.factor)
@@ -62,14 +64,32 @@ fac_to_char <- function(df) {
 #f1 = fac_to_char(f1)
 for(i in (1:length(fs))){
   fs[[i]] = fac_to_char(fs[[i]])
-  fs[[i]] = data.frame("id" = fs[[i]]$player_id, "player" = fs[[i]]$player,    "team" = fs[[i]]$team_name , "snaps" = fs[[i]]$snap_counts_total, pff =   fs[[i]]$grades_defense, "pos" = fs[[i]]$position)
+  fs[[i]] = data.frame("id" = fs[[i]]$player_id, "player" = fs[[i]]$player,    "team" = fs[[i]]$team_name , "snaps" = fs[[i]]$snap_counts_total, pff =   fs[[i]]$grades_defense, "pos_play" = fs[[i]]$position)
 }
 ```
 ```{r}
+length(fs)
+length(ds)
+```
+
+```{r}
 # create list of all valid draft years for a given year
 valid_draft_yrs = vector("list", length(fs))
-for(i in ((1:(length(ds)-3)))){
-  valid_draft_yrs[[i]] = rbind(ds[[i]], ds[[i+1]], ds[[i+2]], ds[[i+3]])
+for(i in (1:(length(fs)))){
+  if(i == 1){
+    valid_draft_yrs[[i]] = ds[[i]]
+  }
+  else if(i==2){
+    valid_draft_yrs[[i]] = rbind(ds[[i]],ds[[i-1]])
+  }
+  else if(i==3){
+    valid_draft_yrs[[i]] = rbind(ds[[i]], ds[[i-1]],ds[[i-2]])
+  } else if(i==length(fs)){
+    valid_draft_yrs[[i]] = rbind(ds[[i-1]], ds[[i-2]], ds[[i-3]])
+  }
+  else {
+    valid_draft_yrs[[i]] = rbind(ds[[i]], ds[[i-1]], ds[[i-2]], ds[[i-3]])
+  }
 }
 ```
 
@@ -83,12 +103,25 @@ for(i in (1 : length(fs))){
 }
 final = rbind_list(ms)
 
-final = subset(final, ((final$pos != 'G') & (final$pos != 'T') & (final$pos != 'TE') & (final$pos != 'TE') & (final$pos != 'FB')  & (final$pos != 'HB') & (final$pos != 'WR')))
-tbl <-as.data.frame(table(unlist(final$pos)))
-
+final = subset(final, ((final$pos_play != 'G') & (final$pos_play != 'T') & (final$pos_play != 'TE')  & (final$pos_play != 'QB')  & (final$pos_play != 'HB') & (final$pos_play != 'WR') & (final$pos_play != 'C') & (final$pos_play!= 'FB')))
+tbl <-as.data.frame(table(unlist(final$pos_play)))
+tbl
 ```
 ```{r}
-by_pos = split(final, final$pos )
+write.xlsx(final, "all_pos.xlsx")
+```
+```{r}
+fl = aggregate(final, by= list(final$player, final$DraftBy, final$pos), FUN = function(x) mean(as.numeric(as.character(x))))
+```
+```{r}
+fl
+
+```
+
+
+
+```{r}
+by_pos = split(fl, final$pos )
 cb = lm(pff ~ pick, data = by_pos$CB)
 di = lm(pff ~ pick, data = by_pos$DI)
 ed = lm(pff ~ pick, data = by_pos$ED)
