@@ -47,6 +47,7 @@ yr = 2010
 for(i in (1:length(ds))){
   ds[[i]] = data.frame("Round" = ds[[i]]$Round, "player" = ds[[i]]$Name, "pick" = ds[[i]]$Player, "Year" =  yr, "DraftBy" = ds[[i]]$Team, "pos_drafted" = ds[[i]]$Position)
   yr = yr + 1
+  ds[[i]] = subset(ds[[i]], ((ds[[i]]$pos_drafted != 'G') & (ds[[i]]$pos_drafted != 'T') &   (ds[[i]]$pos_drafted != 'TE')  & (ds[[i]]$pos_drafted != 'QB')  & (ds[[i]]$pos_drafted != 'C') & (ds[[i]]$pos_drafted != 'WR') & (ds[[i]]$pos_drafted != 'C') & (ds[[i]]$pos_drafted!= 'RB')))
 }
 ```
 
@@ -65,7 +66,9 @@ fac_to_char <- function(df) {
 for(i in (1:length(fs))){
   fs[[i]] = fac_to_char(fs[[i]])
   fs[[i]] = data.frame("id" = fs[[i]]$player_id, "player" = fs[[i]]$player,    "team" = fs[[i]]$team_name , "snaps" = fs[[i]]$snap_counts_total, pff =   fs[[i]]$grades_defense, "pos_play" = fs[[i]]$position)
+  fs[[i]] = subset(fs[[i]], ((fs[[i]]$pos_play != 'G') & (fs[[i]]$pos_play != 'T') & (fs[[i]]$pos_play != 'TE')  & (fs[[i]]$pos_play != 'QB')  & (fs[[i]]$pos_play != 'HB') & (fs[[i]]$pos_play != 'WR') & (fs[[i]]$pos_play != 'C') & (fs[[i]]$pos_play!= 'FB')))
 }
+
 ```
 ```{r}
 length(fs)
@@ -103,25 +106,27 @@ for(i in (1 : length(fs))){
 }
 final = rbind_list(ms)
 
-final = subset(final, ((final$pos_play != 'G') & (final$pos_play != 'T') & (final$pos_play != 'TE')  & (final$pos_play != 'QB')  & (final$pos_play != 'HB') & (final$pos_play != 'WR') & (final$pos_play != 'C') & (final$pos_play!= 'FB')))
-tbl <-as.data.frame(table(unlist(final$pos_play)))
+tbl <-as.data.frame(table(unlist(final$pos_drafted )))
 tbl
 ```
 ```{r}
 write.xlsx(final, "all_pos.xlsx")
 ```
 ```{r}
-fl = aggregate(final, by= list(final$player, final$DraftBy, final$pos), FUN = function(x) mean(as.numeric(as.character(x))))
+fl = aggregate(final, by= list(final$player, final$DraftBy, final$pos_play), FUN = function(x) mean(x))
 ```
 ```{r}
 fl
-
+fl =  fl[ , colSums(is.na(fl)) == 0]
+names(fl)[1] = "player"
+names(fl)[2] = "team"
+names(fl)[3] = "pos"
 ```
 
 
 
 ```{r}
-by_pos = split(fl, final$pos )
+by_pos = split(fl, final$pos_play )
 cb = lm(pff ~ pick, data = by_pos$CB)
 di = lm(pff ~ pick, data = by_pos$DI)
 ed = lm(pff ~ pick, data = by_pos$ED)
