@@ -1,0 +1,288 @@
+---
+title: "Part 1 analysis"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+library("readxl")
+library("dplyr")
+library("plyr")
+library("xlsx")
+library("rlist")
+```
+
+
+```{r}
+# read in datasets both for defense and draft year
+f1 = read.csv("defense_summary-2010.csv")
+f2 = read.csv("defense_summary-2011.csv")
+f3 = read.csv("defense_summary-2012.csv")
+f4 = read.csv("defense_summary-2013.csv")
+f5 = read.csv("defense_summary-2014.csv")
+f6 = read.csv("defense_summary-2015.csv")
+f7 = read.csv("defense_summary-2016.csv")
+f8 = read.csv("defense_summary-2017.csv")
+f9 = read.csv("defense_summary-2018.csv")
+f10 = read.csv("defense_summary-2019.csv")
+d1 = read_excel("2006.xlsx")
+d2 = read_excel("2007.xlsx")
+d3 = read_excel("2008.xlsx")
+d4 = read_excel("2009.xlsx")
+d5 = read_excel("2010.xlsx")
+d6 = read_excel("2011.xlsx")
+d7 = read_excel("2012.xlsx")
+d8 = read_excel("2013.xlsx")
+d9 = read_excel("2014.xlsx")
+d10 = read_excel("2015.xlsx")
+d11 = read_excel("2016.xlsx")
+d12 = read_excel("2017.xlsx")
+d13 = read_excel("2018.xlsx")
+d13$Round = d13$ound
+d13 = subset(d13, select = -c(ound) )
+o1 = read.csv("allowed_pressures-2010.csv")
+o2 = read.csv("allowed_pressures-2011.csv")
+o3 = read.csv("allowed_pressures-2012.csv")
+o4 = read.csv("allowed_pressures-2013.csv")
+o5 = read.csv("allowed_pressures-2014.csv")
+o6 = read.csv("allowed_pressures-2015.csv")
+o7 = read.csv("allowed_pressures-2016.csv")
+o8 = read.csv("allowed_pressures-2017.csv")
+o9 = read.csv("allowed_pressures-2018.csv")
+o10 = read.csv("allowed_pressures-2019.csv")
+strength = read_excel("Team_Strength_Database (1).xlsx")
+```
+
+```{r}
+diff = data.frame("season_year" = strength$Season, "team" = strength$Team, "pt_diff" = strength$Point_Differential)
+diff = subset(diff, season_year > 2009)
+```
+
+
+
+```{r}
+#clean dataset of draft years to needed columns
+ds = list(d5, d6, d7, d8, d9, d10, d11, d12, d13)
+dos = ds
+yr = 2010
+for(i in (1:length(ds))){
+  ds[[i]] = data.frame("Round" = ds[[i]]$Round, "player" = ds[[i]]$Name, "pick" = ds[[i]]$Player, "Year" =  yr, "DraftBy" = ds[[i]]$Team, "pos_drafted" = ds[[i]]$Position)
+  dos[[i]] = data.frame("Round" = dos[[i]]$Round, "player" = dos[[i]]$Name, "pick" = dos[[i]]$Player, "Year" =  yr, "DraftBy" = dos[[i]]$Team, "pos_drafted" = dos[[i]]$Position)
+  yr = yr + 1
+  ds[[i]] = subset(ds[[i]], ((ds[[i]]$pos_drafted != 'G') & (ds[[i]]$pos_drafted != 'T') &   (ds[[i]]$pos_drafted != 'TE')  & (ds[[i]]$pos_drafted != 'QB')  & (ds[[i]]$pos_drafted != 'C') & (ds[[i]]$pos_drafted != 'WR') & (ds[[i]]$pos_drafted != 'C') & (ds[[i]]$pos_drafted!= 'RB')))
+  dos[[i]] = subset(dos[[i]], ((dos[[i]]$pos_drafted != 'DE') & (dos[[i]]$pos_drafted != 'DB') &   (dos[[i]]$pos_drafted != 'DT')  & (dos[[i]]$pos_drafted != 'P')  & (dos[[i]]$pos_drafted != 'LB')))
+}
+```
+
+
+```{r}
+#clean dataframes of statistics to needed columns
+fs = list(f1, f2, f3, f4, f5, f6, f7, f8, f9)
+os = list(o1, o2, o3, o4, o5, o6, o7, o8, o9)
+
+year = 2010
+
+fac_to_char <- function(df) {
+  factors <- sapply(df, is.factor)
+  df[, factors] <- sapply(df[, factors], as.character)
+  return(df)
+}
+
+#f1 = fac_to_char(f1)
+year = 2010
+for(i in (1:length(fs))){
+  fs[[i]] = fac_to_char(fs[[i]])
+  fs[[i]] = data.frame("id" = fs[[i]]$player_id, "player" = fs[[i]]$player,  "team" = fs[[i]]$team_name , "snaps" = fs[[i]]$snap_counts_total, pff =   fs[[i]]$grades_defense, "pos_play" = fs[[i]]$position, "season_year" = year)
+  fs[[i]] = subset(fs[[i]], ((fs[[i]]$pos_play != 'G') & (fs[[i]]$pos_play != 'T') & (fs[[i]]$pos_play != 'TE')  & (fs[[i]]$pos_play != 'QB')  & (fs[[i]]$pos_play != 'HB') & (fs[[i]]$pos_play != 'WR') & (fs[[i]]$pos_play != 'C') & (fs[[i]]$pos_play!= 'FB')))
+  year = year+ 1
+# now do the same thing for the offensive players
+}
+year = 2010
+  for(i in (1:length(os))){
+  os[[i]] = fac_to_char(os[[i]])
+  os[[i]] = data.frame("id" = os[[i]]$player_id, "player" = os[[i]]$player, "team" = os[[i]]$team_name , "snaps" = os[[i]]$snap_counts_offense, pff =   os[[i]]$grades_offense, "pos_play" = os[[i]]$position, "season_year" = year)
+  
+  os[[i]] =  subset(os[[i]], ((os[[i]]$pos_play != 'K') & (os[[i]]$pos_play != 'CB') & (os[[i]]$pos_play != 'S') & (os[[i]]$pos_play != 'LB') & (os[[i]]$pos_play != 'ED') & (os[[i]]$pos_play != 'DI') & (os[[i]]$pos_play != 'LS') & (os[[i]]$pos_play != 'P')))
+  year = year+1
+  }
+```
+```{r}
+length(fs)
+length(dos)
+```
+
+```{r}
+# create list of all valid draft years for a given year
+valid_draft_yrs = vector("list", length(fs))
+for(i in (1:(length(fs)))){
+  if(i == 1){
+    valid_draft_yrs[[i]] = ds[[i]]
+  }
+  else if(i==2){
+    valid_draft_yrs[[i]] = rbind(ds[[i]],ds[[i-1]])
+  }
+  else if(i==3){
+    valid_draft_yrs[[i]] = rbind(ds[[i]], ds[[i-1]],ds[[i-2]])
+  } 
+  # else if(i==length(fs)){
+  #   valid_draft_yrs[[i]] = rbind(ds[[i-1]], ds[[i-2]], ds[[i-3]])
+  # }
+  else {
+    valid_draft_yrs[[i]] = rbind(ds[[i]], ds[[i-1]], ds[[i-2]], ds[[i-3]])
+  }
+}
+
+valid_draft_yrs_off = vector("list", length(os))
+for(i in (1:(length(os)))){
+  if(i == 1){
+    valid_draft_yrs_off[[i]] = dos[[i]] 
+  }
+  else if(i==2){
+    valid_draft_yrs_off[[i]] = rbind(dos[[i]],dos[[i-1]])
+  }
+  else if(i==3){
+    valid_draft_yrs_off[[i]] = rbind(dos[[i]], dos[[i-1]],dos[[i-2]])
+  }
+  # } else if(i==length(os)){
+  #   valid_draft_yrs_off[[i]] = rbind(dos[[i-1]], dos[[i-2]], dos[[i-3]])
+  # }
+  else {
+    valid_draft_yrs_off[[i]] = rbind(dos[[i]], dos[[i-1]], dos[[i-2]], dos[[i-3]])
+  }
+}
+```
+
+
+
+
+```{r}
+# create a dataframe of all players stats on their rookie contracts, final df needed for regression
+ms = vector("list", length(fs))
+for(i in (1 : length(fs))){
+  ms[[i]] = inner_join(valid_draft_yrs[[i]], fs[[i]], by=c("player"))
+}
+final = bind_rows(ms)
+final$year1 = ifelse(((final$season_year - final$Year) == 0), 1, 0)
+final$year2 = ifelse(((final$season_year - final$Year) == 1), 1, 0)
+final$year3 = ifelse(((final$season_year - final$Year) == 2), 1, 0)
+final$year4 = ifelse(((final$season_year - final$Year) == 3), 1, 0)
+
+off = vector("list", length(os))
+for(i in (1 : length(os))){
+  off[[i]] = inner_join(valid_draft_yrs_off[[i]], os[[i]], by=c("player"))
+}
+off_df = bind_rows(off)
+off_df$year1 = ifelse(((off_df$season_year - off_df$Year) == 0), 1, 0)
+off_df$year2 = ifelse(((off_df$season_year - off_df$Year) == 1), 1, 0)
+off_df$year3 = ifelse(((off_df$season_year - off_df$Year) == 2), 1, 0)
+off_df$year4 = ifelse(((off_df$season_year - off_df$Year) == 3), 1, 0)
+```
+
+```{r}
+diff = fac_to_char(diff)
+off_df$team = mapvalues(off_df$team, from = c("ARZ", "BLT", "CLV", "HST", "JAX", "SL", "LA", "LAC"), to = c("ARI", "BAL", "CLE", "HOU", "JAC", "STL", "STL", "SD"))
+final$team = mapvalues(final$team, from = c("ARZ", "BLT", "CLV", "HST", "JAX", "SL", "LA", "LAC"), to = c("ARI", "BAL", "CLE", "HOU", "JAC", "STL", "STL", "SD"))
+off_df$pt_diff = inner_join(off_df, diff, by = c("team", "season_year"))$pt_diff
+final$pt_diff = inner_join(final, diff, by = c("team", "season_year"))$pt_diff
+```
+
+
+```{r}
+write.xlsx(final, "all_def.xlsx")
+write.xlsx(off_df, "all_off.xlsx")
+comb = rbind(final, off_df)
+write.xlsx(comb, "off_and_def.xlsx")
+```
+
+
+```{r}
+comb_agg = suppressWarnings(aggregate(comb, by= list(comb$player, comb$DraftBy, comb$pos_play), FUN = function(x) mean(x)))
+```
+
+```{r}
+round_cols <- function(df, digits) {
+  nums <- vapply(df, is.numeric, FUN.VALUE = logical(1))
+
+  df[,nums] <- round(df[,nums], digits = digits)
+
+  (df)
+}
+```
+
+
+```{r}
+comb_agg =  comb_agg[ , colSums(is.na(comb_agg)) == 0]
+names(comb_agg)[1] = "player"
+names(comb_agg)[2] = "team"
+names(comb_agg)[3] = "pos"
+comb_agg = round_cols(comb_agg, 2)
+comb_agg
+```
+
+
+
+```{r}
+by_pos = split(comb, comb$pos_play)
+by_pos
+# cb = lm(pff ~ pick, data = by_pos$CB)
+# di = lm(pff ~ pick, data = by_pos$DI)
+# ed = lm(pff ~ pick, data = by_pos$ED)
+# lb = lm(pff ~ pick, data = by_pos$LB)
+# s = lm(pff ~ pick, data = by_pos$S)
+# summary(cb)
+# summary(di)
+# summary(ed)
+# summary(lb)
+# summary(s)
+```
+
+```{r}
+lms = vector("list", length = (length(by_pos) *4) )
+index = 1
+for(i in 1:length(by_pos)){
+  rookies = subset(by_pos[[i]], year1 == 1)
+  sophomores = subset(by_pos[[i]], year2 == 1)
+  thirds = subset(by_pos[[i]], year3==1)
+  fourths = subset(by_pos[[i]], year4 == 1)
+  sep_years = list(rookies, sophomores, thirds, fourths)
+  for(j in 1:length(sep_years)){
+     lms[[index]] = lm(sep_years[[j]]$pff ~ sep_years[[j]]$Round + sep_years[[j]]$pt_diff)
+     index = index + 1
+  }
+}
+lms
+```
+```{r}
+summaries = vector("list", length = (length(lms)))
+for(i in (1:length(lms))){
+  summaries[[i]] = summary(lms[[i]])
+}
+summaries[[1]] 
+```
+
+```
+
+```{r}
+cb2 = lm(pff ~ Round, data = by_pos$CB)
+di2= lm(pff ~ Round, data = by_pos$DI)
+ed2 = lm(pff ~ Round, data = by_pos$ED)
+lb2 = lm(pff ~ Round, data = by_pos$LB)
+s2 = lm(pff ~ Round, data = by_pos$S)
+summary(cb2)
+summary(di2)
+summary(ed2)
+summary(lb2)
+summary(s2)
+```
+
+```{r}
+plot(x = by_pos$DI$pick, y = by_pos$DI$pff)
+plot(x = by_pos$CB$pick, y = by_pos$CB$pff)
+```
+
+
+
+
+
+
